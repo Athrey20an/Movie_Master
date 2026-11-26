@@ -15,11 +15,25 @@ html, body, [class*="css"], .stMarkdown, .stTextInput, .stSelectbox { font-famil
 *, *::before, *::after { box-sizing: border-box; }
 
 /* Hero */
-.hero { text-align: center; padding: 2.2rem 1rem 1.4rem; margin-bottom: .8rem; border-radius: 20px;
-  background: radial-gradient(circle at 50% 0%, rgba(229,9,20,.28), rgba(11,11,15,0) 70%); }
+.hero { text-align: center; padding: 2.2rem 1rem 1.2rem; margin-bottom: .8rem; border-radius: 20px;
+  position: relative; overflow: hidden; isolation: isolate; }
+.hero::before { content: ""; position: absolute; inset: -30%; z-index: -1;
+  background: radial-gradient(circle at 50% 30%, rgba(229,9,20,.30), rgba(11,11,15,0) 55%);
+  animation: drift 14s ease-in-out infinite; }
 .hero h1 { font-size: clamp(2.2rem, 6vw, 3.6rem); font-weight: 800; letter-spacing: -1.5px; margin: 0;
-  background: linear-gradient(90deg, #fff 0%, #ffb3b8 55%, #E50914 100%);
-  -webkit-background-clip: text; background-clip: text; color: transparent; }
+  background: linear-gradient(90deg, #fff 0%, #ffb3b8 25%, #E50914 50%, #ffb3b8 75%, #fff 100%);
+  background-size: 200% auto; -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: titleShine 6s linear infinite, fadeUp .7s ease both; }
+.hero p, .stats { animation: fadeUp .7s ease .15s both; }
+.marquee { overflow: hidden; margin: 1.4rem -1rem 0; animation: fadeUp .9s ease .3s both;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); }
+.track { display: flex; gap: .7rem; width: max-content; animation: scroll 70s linear infinite; }
+.marquee:hover .track { animation-play-state: paused; }
+.track img { height: 132px; aspect-ratio: 2/3; object-fit: cover; border-radius: 9px; opacity: .55;
+  background: #1c1c25; transition: opacity .3s ease, transform .3s ease; }
+.track img:hover { opacity: 1; transform: translateY(-4px) scale(1.05); }
+@media (max-width: 560px) { .track img { height: 96px; } }
 .hero p { color: #A8A8B3; font-size: 1.05rem; margin: .6rem auto 0; max-width: 600px; }
 .stats { display: flex; justify-content: center; gap: 1.6rem; margin-top: 1rem; flex-wrap: wrap; }
 .stats div { color: #8E8E99; font-size: .82rem; }
@@ -34,7 +48,9 @@ html, body, [class*="css"], .stMarkdown, .stTextInput, .stSelectbox { font-famil
 
 /* Section heading */
 .section { font-size: 1.25rem; font-weight: 600; margin: 1.8rem 0 .3rem; }
-.section span { color: #E50914; }
+.section { animation: fadeUp .5s ease both; }
+.section span { color: #E50914; background: linear-gradient(#E50914, #E50914) left bottom / 0 2px no-repeat;
+  padding-bottom: 2px; animation: underline .7s ease .25s forwards; }
 .subsection { color: #8E8E99; font-size: .88rem; margin: 0 0 .9rem; }
 
 /* Poster grid */
@@ -44,18 +60,35 @@ html, body, [class*="css"], .stMarkdown, .stTextInput, .stSelectbox { font-famil
 @media (max-width: 560px) { .grid, .grid.six { grid-template-columns: repeat(2, 1fr); gap: .8rem; }
   .seed { flex-direction: column; text-align: center; } .hero { padding: 1.4rem .5rem 1rem; } }
 
+.grid { perspective: 1200px; }
 .card { background: #17171F; border-radius: 14px; overflow: hidden; position: relative;
-  opacity: 0; animation: fadeUp .5s ease forwards; transition: transform .25s ease, box-shadow .25s ease; }
-.card:hover { transform: translateY(-6px); box-shadow: 0 14px 30px rgba(229,9,20,.25); }
-.card:nth-child(1){animation-delay:.00s} .card:nth-child(2){animation-delay:.07s}
-.card:nth-child(3){animation-delay:.14s} .card:nth-child(4){animation-delay:.21s}
-.card:nth-child(5){animation-delay:.28s} .card:nth-child(6){animation-delay:.35s}
+  animation: rise .55s cubic-bezier(.2,.8,.2,1) both;
+  transition: transform .3s cubic-bezier(.2,.8,.2,1), box-shadow .3s ease; }
+.card:hover { transform: translateY(-8px) rotateX(4deg); box-shadow: 0 18px 36px rgba(229,9,20,.28); }
+.grid.six .card { animation: flipIn .7s cubic-bezier(.2,.8,.2,1) both; transform-origin: left center; }
+.card:nth-child(1){animation-delay:.00s} .card:nth-child(2){animation-delay:.08s}
+.card:nth-child(3){animation-delay:.16s} .card:nth-child(4){animation-delay:.24s}
+.card:nth-child(5){animation-delay:.32s} .card:nth-child(6){animation-delay:.40s}
 @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes rise { from { opacity: 0; translate: 0 22px; scale: .96; } to { opacity: 1; translate: 0 0; scale: 1; } }
+@keyframes flipIn { from { opacity: 0; rotate: y -75deg; } to { opacity: 1; rotate: y 0deg; } }
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@keyframes titleShine { to { background-position: 200% center; } }
+@keyframes drift { 0%, 100% { transform: translate(-12%, -8%); } 50% { transform: translate(12%, 6%); } }
+@keyframes scroll { to { transform: translateX(-50%); } }
+@keyframes underline { to { background-size: 100% 2px; } }
+@keyframes slideIn { from { opacity: 0; translate: -8px 0; } to { opacity: 1; translate: 0 0; } }
+@keyframes glow { 0%, 100% { box-shadow: 0 0 0 0 rgba(229,9,20,.45); } 50% { box-shadow: 0 0 0 8px rgba(229,9,20,0); } }
 
 .pwrap { overflow: hidden; position: relative; }
-.poster { width: 100%; aspect-ratio: 2/3; object-fit: cover; display: block; transition: transform .4s ease;
-  background: #24242E; }
-.card:hover .poster { transform: scale(1.04); }
+.pwrap::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,.22) 50%, transparent 65%);
+  transform: translateX(-130%); transition: transform .8s ease; }
+.card:hover .pwrap::after { transform: translateX(130%); }
+.poster { width: 100%; aspect-ratio: 2/3; object-fit: cover; display: block; transition: transform .5s ease;
+  background: linear-gradient(90deg, #1c1c25 25%, #2b2b37 50%, #1c1c25 75%); background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite; }
+.card:hover .poster { transform: scale(1.06); }
 .noposter { width: 100%; aspect-ratio: 2/3; display: flex; flex-direction: column; gap: .5rem; align-items: center;
   justify-content: center; text-align: center; padding: 1rem; font-weight: 700; font-size: 1rem; color: #fff;
   overflow-wrap: anywhere; background: linear-gradient(160deg, #3a0a0e, #17171F 60%); }
@@ -72,7 +105,8 @@ html, body, [class*="css"], .stMarkdown, .stTextInput, .stSelectbox { font-famil
 .chips { display: flex; flex-wrap: wrap; gap: .3rem; }
 .chip { font-size: .66rem; padding: .15rem .5rem; border-radius: 999px; background: #24242E; color: #C9C9D1; }
 .why { margin-top: .6rem; font-size: .74rem; line-height: 1.4; color: #E8C7C9;
-  background: rgba(229,9,20,.08); border-left: 2px solid #E50914; padding: .35rem .5rem; border-radius: 0 6px 6px 0; }
+  background: rgba(229,9,20,.08); border-left: 2px solid #E50914; padding: .35rem .5rem; border-radius: 0 6px 6px 0;
+  animation: slideIn .5s ease .45s both; }
 .card details { margin-top: .5rem; font-size: .76rem; color: #A8A8B3; }
 .card summary { cursor: pointer; color: #E50914; font-weight: 500; list-style: none; }
 .card summary::-webkit-details-marker { display: none; }
@@ -87,6 +121,19 @@ html, body, [class*="css"], .stMarkdown, .stTextInput, .stSelectbox { font-famil
 
 [data-testid="stPills"] button { border-radius: 999px !important; transition: all .2s ease; }
 [data-testid="stPills"] button:hover { transform: translateY(-2px); }
+[data-testid="stPills"] button[aria-checked="true"], [data-testid="stPills"] button[kind*="Active"] {
+  box-shadow: 0 0 14px rgba(229,9,20,.45); }
+[data-testid="stButton"] button { border-radius: 999px; border: 1px solid #E50914; background: #17171F;
+  font-weight: 600; transition: transform .2s ease, background .2s ease; animation: glow 2.4s ease-in-out infinite; }
+[data-testid="stButton"] button:hover { background: #E50914; color: #fff; transform: translateY(-2px) scale(1.03); }
+[data-testid="stButton"] button:active { transform: scale(.96); }
+.stTabs [data-baseweb="tab"]:hover { background: #24242E; }
+
+/* Respect "reduce motion" settings */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .section span { background-size: 100% 2px; }
+}
 
 .foot { text-align: center; color: #6B6B76; font-size: .75rem; margin-top: 3rem; line-height: 1.6; }
 .foot a { color: #8E8E99; }
@@ -162,12 +209,16 @@ def seed_html(row):
             f' · {e(genres)}{mpaa}</div>{people_html}<p>{short}</p></div></div>')
 
 
-def hero_html(n_movies, n_langs):
+def hero_html(n_movies, n_langs, posters=()):
+    strip = ""
+    if posters:
+        imgs = "".join(f'<img src="https://image.tmdb.org/t/p/w185{p}" alt="" loading="lazy">' for p in posters)
+        strip = f'<div class="marquee"><div class="track">{imgs}{imgs}</div></div>'   # doubled for a seamless loop
     return ('<div class="hero"><h1>Movie Master</h1>'
             '<p>Pick a movie you love, or tell it how you feel. Get picks from around the world, '
             'with the reason behind every one.</p>'
             f'<div class="stats"><div><b>{n_movies:,}</b>movies</div><div><b>{n_langs}</b>languages</div>'
-            '<div><b>10</b>moods</div></div></div>')
+            f'<div><b>10</b>moods</div></div>{strip}</div>')
 
 
 FOOTER = ('<div class="foot">Built by Athreyan Babu with Python, scikit-learn and Streamlit<br>'

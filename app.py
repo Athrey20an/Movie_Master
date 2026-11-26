@@ -77,7 +77,18 @@ def shuffle_button(key, state, results, pool):
     st.markdown(f'<p class="subsection" style="text-align:center">{note}</p>', unsafe_allow_html=True)
 
 
-st.markdown(ui.hero_html(len(model.df), model.df["original_language"].nunique()), unsafe_allow_html=True)
+@st.cache_data(show_spinner=False)
+def hero_posters(version, n=28):
+    """Poster strip: the most-voted films, alternating English and other languages."""
+    d = model.df[(model.df["poster_path"] != "") & (model.df["vote_average"] >= 7.0) & ~model.df["explicit"]]
+    en = d[d["original_language"] == "en"]["poster_path"].head(n // 2).tolist()
+    world = d[d["original_language"] != "en"].drop_duplicates("original_language").head(8)["poster_path"].tolist()
+    world += [p for p in d[d["original_language"] != "en"]["poster_path"].head(n) if p not in world]
+    return [p for pair in zip(en, world[: n // 2]) for p in pair]
+
+
+st.markdown(ui.hero_html(len(model.df), model.df["original_language"].nunique(), hero_posters(VERSION)),
+            unsafe_allow_html=True)
 
 # ---------------- Global controls ----------------
 lang_codes = model.language_options()

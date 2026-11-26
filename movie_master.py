@@ -132,6 +132,8 @@ PLACES = {w.strip() for line in PLACES for w in line.split()} | {
     "new york city", "los angeles", "san francisco", "hong kong", "south korea", "north korea",
     "las vegas", "new orleans", "washington d.c.", "new jersey", "united kingdom", "soviet union",
     "east germany", "west germany", "new york", "south africa", "latin america"}
+# Erotic-genre tags: these films stay searchable but never appear in recommendations
+EXPLICIT = {"softcore", "bdsm", "erotica", "erotique", "sexploitation", "pinku eiga", "nunsploitation", "erotic movie"}
 # Never shown in explanations on a public page (still used for matching)
 HIDE_IN_WHY = {"incest", "rape", "urination", "sadism", "nudity", "sex", "erotic", "pornography",
                "masturbation", "prostitute", "prostitution", "duringcreditsstinger", "aftercreditsstinger",
@@ -181,6 +183,7 @@ class MovieMaster:
         self.df = df
         self.genre_sets = df["genre_list"].map(set)
         self.kw_sets = df["kw_list"].map(lambda k: {x.lower() for x in k})
+        df["explicit"] = self.kw_sets.map(lambda k: bool(k & EXPLICIT))
         self._build_matrix()
 
         # Search labels: "Title (year)", made unique where titles repeat
@@ -265,7 +268,7 @@ class MovieMaster:
         return [c for c in counts.index if counts[c] >= min_films and c in LANG_NAMES and c != "xx"]
 
     def _mask(self, lang=None, family_only=False, min_rank=0.0):
-        ok = self.df["lang_rank"].values >= min_rank
+        ok = (self.df["lang_rank"].values >= min_rank) & ~self.df["explicit"].values
         if lang:
             ok &= self.df["original_language"].values == lang
         if family_only:
