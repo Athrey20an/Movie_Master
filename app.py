@@ -9,6 +9,21 @@ st.set_page_config(page_title="Movie Master", page_icon="🎬", layout="wide")
 st.markdown(ui.CSS, unsafe_allow_html=True)
 
 
+@st.cache_data(show_spinner=False)
+def background_style():
+    """Clapperboard watermark from clapperboard.webp (top level of the repo, or static/)."""
+    import base64
+    from PIL import Image
+    path = next((p for p in ["clapperboard.webp", "static/clapperboard.webp"] if Path(p).exists()), None)
+    if not path:
+        return ""
+    w, h = Image.open(path).size
+    return ui.background_css(base64.b64encode(Path(path).read_bytes()).decode(), w / h)
+
+
+st.markdown(background_style(), unsafe_allow_html=True)
+
+
 DATA = next(p for p in ["data/movies_master.csv.gz", "movies_master.csv.gz"] if Path(p).exists())
 # Fingerprint of the model code + data: when either changes on GitHub, the cached model is rebuilt
 # instead of the app reusing an old one (which caused "AttributeError: no attribute 'search'")

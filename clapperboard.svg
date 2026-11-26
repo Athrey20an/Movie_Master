@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 760" width="600" height="760">
+  <defs>
+    <!-- diagonal white stripes for the sticks -->
+    <pattern id="stripes" width="96" height="60" patternUnits="userSpaceOnUse">
+      <rect width="96" height="60" fill="#22222C"/>
+      <polygon points="18,0 62,0 38,60 -6,60" fill="#F4F4F6"/>
+      <polygon points="114,0 158,0 134,60 90,60" fill="#F4F4F6"/>
+    </pattern>
+    <clipPath id="stickClip"><rect x="0" y="0" width="520" height="60" rx="6"/></clipPath>
+  </defs>
+
+  <g transform="translate(0,100)">
+  <!-- board -->
+  <rect x="40" y="236" width="520" height="400" rx="12" fill="#22222C"/>
+
+  <!-- lower stick -->
+  <g transform="translate(40,170)">
+    <g clip-path="url(#stickClip)"><rect width="520" height="60" fill="url(#stripes)"/></g>
+  </g>
+
+  <!-- upper stick, opened -->
+  <g transform="translate(40,170) rotate(-17)">
+    <g transform="translate(0,-64)">
+      <g clip-path="url(#stickClip)"><rect width="520" height="60" fill="url(#stripes)"/></g>
+    </g>
+  </g>
+
+  <!-- hinge plate -->
+  <polygon points="30,96 104,74 120,150 120,236 30,236" fill="#2C2C38"/>
+  <circle cx="58" cy="122" r="7" fill="#C9C9D1"/>
+  <circle cx="58" cy="200" r="7" fill="#C9C9D1"/>
+  <circle cx="96" cy="200" r="7" fill="#C9C9D1"/>
+
+  <!-- board grid -->
+  <g stroke="#F4F4F6" stroke-width="7" stroke-linecap="round" fill="none">
+    <line x1="64" y1="300" x2="536" y2="300"/>
+    <line x1="64" y1="404" x2="536" y2="404"/>
+    <line x1="64" y1="462" x2="536" y2="462"/>
+    <line x1="64" y1="520" x2="536" y2="520"/>
+    <line x1="64" y1="578" x2="536" y2="578"/>
+    <line x1="221" y1="300" x2="221" y2="404"/>
+    <line x1="379" y1="300" x2="379" y2="404"/>
+    <line x1="352" y1="404" x2="352" y2="520"/>
+  </g>
+  <g fill="#F4F4F6" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="25" letter-spacing="1">
+    <text x="88" y="338">SCENE</text>
+    <text x="258" y="338">TAKE</text>
+    <text x="412" y="338">ROLL</text>
+    <text x="80" y="444" font-size="21">DATE</text>
+    <text x="368" y="444" font-size="21">SOUND</text>
+    <text x="80" y="502" font-size="21">PROD.CO.</text>
+    <text x="80" y="560" font-size="21">DIRECTOR</text>
+    <text x="80" y="618" font-size="21">CAMERA</text>
+  </g>
+  </g>
+</svg>

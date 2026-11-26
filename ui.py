@@ -221,6 +221,22 @@ def hero_html(n_movies, n_langs, posters=()):
             f'<div><b>10</b>moods</div></div>{strip}</div>')
 
 
+def background_css(b64, ratio):
+    """Clapperboard watermark: fixed in the bottom-right corner, faint, slowly floating."""
+    return f"""<style>
+.stApp {{ position: relative; }}
+.stApp::before {{ content: ""; position: fixed; right: -70px; bottom: -50px; z-index: 0; pointer-events: none;
+  width: min(560px, 62vw); aspect-ratio: {ratio:.4f};
+  background: url(data:image/webp;base64,{b64}) no-repeat center / contain;
+  opacity: .11; animation: floaty 14s ease-in-out infinite; }}
+[data-testid="stAppViewContainer"] > *, .block-container {{ position: relative; z-index: 1; }}
+@keyframes floaty {{ 0%, 100% {{ transform: rotate(-12deg) translateY(0); }}
+  50% {{ transform: rotate(-9deg) translateY(-14px); }} }}
+@media (max-width: 560px) {{ .stApp::before {{ opacity: .07; right: -40px; bottom: -30px; }} }}
+@media (prefers-reduced-motion: reduce) {{ .stApp::before {{ transform: rotate(-12deg); }} }}
+</style>"""
+
+
 FOOTER = ('<div class="foot">Built by Athreyan Babu with Python, scikit-learn and Streamlit<br>'
           'Movie data and posters from <a href="https://www.themoviedb.org" target="_blank">TMDB</a> '
           '(via Kaggle datasets), with MPAA ratings from an IMDb-based Kaggle dataset. '
