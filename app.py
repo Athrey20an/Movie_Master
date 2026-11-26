@@ -10,7 +10,7 @@ st.markdown(ui.CSS, unsafe_allow_html=True)
 
 
 @st.cache_data(show_spinner=False)
-def background_style(path, size, mtime):
+def background_style(path, size, mtime, ui_version):
     """Clapperboard watermark. Cached per file version, so replacing the image updates it."""
     import base64
     from PIL import Image
@@ -29,7 +29,9 @@ def find_background():
 
 BG = find_background()
 if BG:   # checked on every run, never cached as "missing"
-    st.markdown(background_style(BG, Path(BG).stat().st_size, Path(BG).stat().st_mtime), unsafe_allow_html=True)
+    ui_version = hashlib.md5(Path("ui.py").read_bytes()).hexdigest()
+    st.markdown(background_style(BG, Path(BG).stat().st_size, Path(BG).stat().st_mtime, ui_version),
+                unsafe_allow_html=True)
 
 
 DATA = next(p for p in ["data/movies_master.csv.gz", "movies_master.csv.gz"] if Path(p).exists())
