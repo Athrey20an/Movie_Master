@@ -16,6 +16,24 @@ def load_model():
 
 
 model = load_model()
+
+
+# Cached results: switching toggles or revisiting a movie is instant
+@st.cache_data(max_entries=500, show_spinner=False)
+def get_similar(label, lang, family, mix):
+    return model.similar(label, lang=lang, family_only=family, mix=mix)
+
+
+@st.cache_data(max_entries=500, show_spinner=False)
+def get_twins(i, family):
+    return model.twins(i, family_only=family)
+
+
+@st.cache_data(max_entries=500, show_spinner=False)
+def get_mood(text, pill, lang, family, mix):
+    return model.by_mood(text, moods=[pill] if pill else None, lang=lang, family_only=family, mix=mix)
+
+
 st.markdown(ui.hero_html(len(model.df), model.df["original_language"].nunique()), unsafe_allow_html=True)
 
 # ---------------- Global controls ----------------
@@ -39,11 +57,22 @@ tab_similar, tab_mood, tab_how = st.tabs(["🎞️  Similar movies", "🎭  By m
 
 # ---------------- Similar movies ----------------
 with tab_similar:
-    labels = model.labels
-    default = next((i for i, l in enumerate(labels) if l.startswith("The Dark Knight (2008")), 0)
-    choice = st.selectbox(f"Search {len(labels):,} movies", labels, index=default,
-                          label_visibility="collapsed", placeholder="Search a movie...")
-    i, results = model.similar(choice, lang=lang, family_only=family, mix=mix)
+    default = next((i for i, l in enumerate(model.labels) if l.startswith("The Dark Knight (2008")), 0)
+    q = st.text_input("Search a movie", key="movie_q", label_visibility="collapsed",
+                      placeholder=f"Search {len(model.df):,} movies, then press Enter: Parasite, 3 Idiots, Baahubali, दंगल...")
+    idx = default
+    if q.strip():
+        matches = model.search(q)
+        if matches:
+            picked = st.pills("Matches", matches, format_func=lambda i: model.labels[i], default=matches[0],
+                              key=f"pick_{q}", label_visibility="collapsed")
+            idx = matches[0] if picked is None else picked
+        else:
+            st.caption("No movie found with that name. Check the spelling or try fewer letters.")
+            idx = None
+    else:
+        st.caption("Showing The Dark Knight. Type any title, in English or its original script, and press Enter.")
+    i, results = get_similar(model.labels[idx], lang, family, mix) if idx is not None else (None, None)
     if results is not None:
         st.markdown(ui.seed_html(model.df.loc[i]), unsafe_allow_html=True)
         where = f" in {LANG_NAMES[lang]}" if lang else ""
@@ -54,7 +83,7 @@ with tab_similar:
         else:
             st.caption("No matches with these filters. Try another language or turn off Family-friendly.")
 
-        twins = model.twins(i, family_only=family)
+        twins = get_twins(i, family)
         if len(twins):
             st.markdown('<div class="section">Same vibe, <span>another language</span></div>'
                         '<p class="subsection">The closest match to your movie in other film industries. '
@@ -80,8 +109,7 @@ with tab_mood:
     text = st.session_state.get("mood_text", "").strip()
 
     if pill or text:
-        moods, results = model.by_mood(text, moods=[pill] if pill else None, lang=lang,
-                                       family_only=family, mix=mix)
+        moods, results = get_mood(text, pill, lang, family, mix)
         where = f" in {LANG_NAMES[lang]}" if lang else ""
         if moods:
             label = " + ".join(f"{MOODS[m]['emoji']} {MOODS[m]['label']}" for m in moods)

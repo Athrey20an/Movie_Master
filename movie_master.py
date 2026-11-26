@@ -1,6 +1,7 @@
 """Movie Master core: multilingual content-based recommender with mood search and explanations."""
 import difflib
 import re
+import unicodedata
 
 import numpy as np
 import pandas as pd
@@ -137,6 +138,13 @@ HIDE_IN_WHY = {"incest", "rape", "urination", "sadism", "nudity", "sex", "erotic
                "woman director", "based on novel or book", "voiceover", "sequel", "remake"}
 
 
+def _fold(s):
+    """Accent-free, lowercase, doubled letters collapsed: 'Bāhubali' and 'Baahubali' both -> 'bahubali'."""
+    s = unicodedata.normalize("NFKD", str(s)).encode("ascii", "ignore").decode().lower()
+    s = re.sub(r"[^a-z0-9]", "", s)          # "K.G.F" -> "kgf", "3 Idiots" -> "3idiots"
+    return re.sub(r"(.)\1+", r"\1", s)
+
+
 def _squash(s):
     return re.sub(r"\W+", "", str(s).lower())
 
@@ -182,6 +190,9 @@ class MovieMaster:
         self.labels = labels.tolist()
         self.label_index = {l: i for i, l in enumerate(self.labels)}
         self.titles_lower = df["title"].str.lower().tolist()
+        self._t_lower = df["title"].str.lower()
+        self._o_lower = df["original_title"].str.lower()
+        self._f_lower = df["title"].map(_fold)
 
     # ------------------------------------------------------------------ setup
     @staticmethod
@@ -224,6 +235,30 @@ class MovieMaster:
             return self.titles_lower.index(name)
         match = difflib.get_close_matches(name, self.titles_lower, n=1, cutoff=0.6)
         return self.titles_lower.index(match[0]) if match else None
+
+    def search(self, query, n=8):
+        """Top title matches for a search box: substring match on English and original titles,
+        titles that start with the query first, then by popularity. Falls back to fuzzy matching."""
+        q = query.lower().strip()
+        if not q:
+            return []
+        t, o = self._t_lower, self._o_lower
+        exact = t.str.contains(q, regex=False) | o.str.contains(q, regex=False)
+        fq = _fold(q)
+        folded = self._f_lower.str.contains(fq, regex=False) if len(fq) >= 3 else exact & False
+        hit = exact | folded
+        if hit.any():
+            starts = t.str.startswith(q) | o.str.startswith(q)
+            if len(fq) >= 3:
+                starts |= self._f_lower.str.startswith(fq)
+            full = (t == q) | (o == q) | ((self._f_lower == fq) if len(fq) >= 3 else False)
+            cand = pd.DataFrame({"full": full[hit], "starts": starts[hit], "votes": self.df.loc[hit, "vote_count"]})
+            return cand.sort_values(["full", "starts", "votes"], ascending=False).index[:n].tolist()
+        if len(q) >= 3:   # typo fallback, limited to the 8,000 most-voted titles for speed
+            pool = self.titles_lower[:8000]
+            close = difflib.get_close_matches(q, pool, n=n, cutoff=0.6)
+            return [pool.index(c) for c in close]
+        return []
 
     def language_options(self, min_films=40):
         counts = self.df["original_language"].value_counts()
