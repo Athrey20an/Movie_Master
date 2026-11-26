@@ -15,10 +15,19 @@ def background_style(path, size, mtime):
     import base64
     from PIL import Image
     w, h = Image.open(path).size
-    return ui.background_css(base64.b64encode(Path(path).read_bytes()).decode(), w / h)
+    mime = {".png": "png", ".jpg": "jpeg", ".jpeg": "jpeg"}.get(Path(path).suffix.lower(), "webp")
+    return ui.background_css(base64.b64encode(Path(path).read_bytes()).decode(), w / h, mime)
 
 
-BG = next((p for p in ["clapperboard.webp", "static/clapperboard.webp"] if Path(p).exists()), None)
+def find_background():
+    """Newest file named clapperboard*.webp/png/jpg, so 'clapperboard (1).webp' from a re-download also works."""
+    found = [f for pattern in ["clapperboard*.webp", "clapperboard*.png", "clapperboard*.jpg",
+                               "static/clapperboard*.*", "*/clapperboard*.*"]
+             for f in Path(".").glob(pattern) if f.is_file()]
+    return str(max(found, key=lambda f: f.stat().st_mtime)) if found else None
+
+
+BG = find_background()
 if BG:   # checked on every run, never cached as "missing"
     st.markdown(background_style(BG, Path(BG).stat().st_size, Path(BG).stat().st_mtime), unsafe_allow_html=True)
 

@@ -221,7 +221,7 @@ def hero_html(n_movies, n_langs, posters=()):
             f'<div><b>10</b>moods</div></div>{strip}</div>')
 
 
-def background_css(b64, ratio):
+def background_css(b64, ratio, mime="webp"):
     """Clapperboard watermark: fixed in the bottom-right corner, faint, slowly floating."""
     return f"""<style>
 .stApp {{ position: relative; background: #0B0B0F !important; }}
@@ -231,7 +231,7 @@ section.main, .main, [data-testid="stHeader"], [data-testid="stBottom"], [data-t
 [data-testid="stAppViewBlockContainer"] {{ background: transparent !important; }}
 .stApp::before {{ content: ""; position: fixed; right: -70px; bottom: -50px; z-index: 0; pointer-events: none;
   width: min(560px, 62vw); aspect-ratio: {ratio:.4f};
-  background: url(data:image/webp;base64,{b64}) no-repeat center / contain;
+  background: url(data:image/{mime};base64,{b64}) no-repeat center / contain;
   opacity: .11; animation: floaty 14s ease-in-out infinite; }}
 [data-testid="stAppViewContainer"] > *, .block-container {{ position: relative; z-index: 1; }}
 @keyframes floaty {{ 0%, 100% {{ transform: rotate(-12deg) translateY(0); }}
