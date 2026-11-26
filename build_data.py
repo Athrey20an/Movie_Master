@@ -17,8 +17,10 @@ from pathlib import Path
 
 import pandas as pd
 
-RAW = Path(__file__).parent / "data" / "raw"
-OUT = Path(__file__).parent / "data" / "movies_master.csv"
+HERE = Path(__file__).parent
+# Works with data in data/raw/ or with everything at the top level of the repo
+RAW = HERE / "data" / "raw" if (HERE / "data" / "raw").exists() else HERE
+OUT = (HERE / "data" if (HERE / "data").exists() else HERE) / "movies_master.csv.gz"
 
 
 def norm_title(t):
@@ -52,7 +54,7 @@ def comma_to_pipe(s, limit=None):
 
 
 def main():
-    g = pd.read_csv(RAW / "movies_global.csv")
+    g = pd.read_csv(RAW / "movies_global.csv.gz")
     g = g.drop_duplicates("id")
     g["year"] = pd.to_datetime(g["release_date"], errors="coerce").dt.year
     g["genres"] = g["genres"].map(comma_to_pipe)
@@ -61,7 +63,7 @@ def main():
         g[col] = g[col].fillna("")
 
     # People from TMDB 5000 crew (most reliable), then movies2024 for gaps
-    t = pd.read_csv(RAW / "tmdb_movies.csv", low_memory=False)
+    t = pd.read_csv(RAW / "tmdb_movies.csv.gz", low_memory=False)
     t = t[t["id"].isin(g["id"])]
     crew = pd.DataFrame({
         "id": t["id"],
@@ -69,7 +71,7 @@ def main():
         "writers": t["crew"].map(lambda c: crew_people(c, {"Screenplay", "Writer", "Novel", "Story"})),
         "composer": t["crew"].map(lambda c: crew_people(c, {"Original Music Composer", "Music"}, limit=1)),
     })
-    m24 = pd.read_csv(RAW / "movies2024.csv").drop_duplicates("MovieID")
+    m24 = pd.read_csv(RAW / "movies2024.csv.gz").drop_duplicates("MovieID")
     m24 = pd.DataFrame({"id": m24["MovieID"],
                         "director_b": m24["Directors"].map(lambda s: comma_to_pipe(s, 2)),
                         "cast": m24["Actors"].map(lambda s: comma_to_pipe(s, 5))})
@@ -79,7 +81,7 @@ def main():
         g[col] = g[col].fillna("")
 
     # MPAA + IMDb score from the IMDb-based file, matched on title + year within 1
-    imdb = pd.read_csv(RAW / "movies_updated.csv")
+    imdb = pd.read_csv(RAW / "movies_updated.csv.gz")
     imdb["key"] = imdb["name"].map(norm_title)
     g["key"] = g["title"].map(norm_title)
     imdb = imdb.rename(columns={"year": "imdb_year", "rating": "mpaa", "score": "imdb_score", "votes": "imdb_votes"})

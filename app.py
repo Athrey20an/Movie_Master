@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import streamlit as st
 from movie_master import MovieMaster, MOODS, LANG_NAMES
 import ui
@@ -8,7 +10,9 @@ st.markdown(ui.CSS, unsafe_allow_html=True)
 
 @st.cache_resource(show_spinner="Warming up the projector...")
 def load_model():
-    return MovieMaster("data/movies_master.csv")
+    # Works whether the data sits in data/ or at the top level of the repo
+    path = next(p for p in ["data/movies_master.csv.gz", "movies_master.csv.gz"] if Path(p).exists())
+    return MovieMaster(path)
 
 
 model = load_model()

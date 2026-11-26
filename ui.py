@@ -9,6 +9,7 @@ CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap');
 html, body, [class*="css"], .stMarkdown, .stTextInput, .stSelectbox { font-family: 'Inter', sans-serif; }
+.stApp { background: #0B0B0F; color: #F2F2F5; }   /* backup if .streamlit/config.toml is missing */
 #MainMenu, footer, header[data-testid="stHeader"] { visibility: hidden; height: 0; }
 .block-container { padding-top: 2rem; padding-bottom: 3rem; max-width: 1160px; }
 *, *::before, *::after { box-sizing: border-box; }
