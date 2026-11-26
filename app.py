@@ -1,3 +1,4 @@
+import hashlib
 from pathlib import Path
 
 import streamlit as st
@@ -8,30 +9,72 @@ st.set_page_config(page_title="Movie Master", page_icon="🎬", layout="wide")
 st.markdown(ui.CSS, unsafe_allow_html=True)
 
 
+DATA = next(p for p in ["data/movies_master.csv.gz", "movies_master.csv.gz"] if Path(p).exists())
+# Fingerprint of the model code + data: when either changes on GitHub, the cached model is rebuilt
+# instead of the app reusing an old one (which caused "AttributeError: no attribute 'search'")
+VERSION = hashlib.md5(Path("movie_master.py").read_bytes() + str(Path(DATA).stat().st_size).encode()).hexdigest()
+
+
 @st.cache_resource(show_spinner="Warming up the projector...")
-def load_model():
-    # Works whether the data sits in data/ or at the top level of the repo
-    path = next(p for p in ["data/movies_master.csv.gz", "movies_master.csv.gz"] if Path(p).exists())
-    return MovieMaster(path)
+def load_model(version):
+    return MovieMaster(DATA)
 
 
-model = load_model()
+model = load_model(VERSION)
 
 
 # Cached results: switching toggles or revisiting a movie is instant
 @st.cache_data(max_entries=500, show_spinner=False)
-def get_similar(label, lang, family, mix):
-    return model.similar(label, lang=lang, family_only=family, mix=mix)
+def get_similar(label, lang, family, mix, version, seed=0, exclude=()):
+    return model.similar(label, lang=lang, family_only=family, mix=mix, seed=seed, exclude=exclude)
 
 
 @st.cache_data(max_entries=500, show_spinner=False)
-def get_twins(i, family):
-    return model.twins(i, family_only=family)
+def get_twins(i, family, version, seed=0):
+    return model.twins(i, family_only=family, seed=seed)
 
 
 @st.cache_data(max_entries=500, show_spinner=False)
-def get_mood(text, pill, lang, family, mix):
-    return model.by_mood(text, moods=[pill] if pill else None, lang=lang, family_only=family, mix=mix)
+def get_mood(text, pill, lang, family, mix, version, seed=0, exclude=()):
+    return model.by_mood(text, moods=[pill] if pill else None, lang=lang, family_only=family, mix=mix,
+                         seed=seed, exclude=exclude)
+
+
+# ---------------- Shuffle state ----------------
+# Each tab remembers its shuffle round and which movies it already showed for the current search.
+# A new search, mood or filter starts again from the best 5.
+def shuffle_state(key, signature):
+    state = st.session_state.setdefault(key, {"sig": None, "seed": 0, "shown": []})
+    if state["sig"] != signature:
+        state.update(sig=signature, seed=0, shown=[])
+    return state
+
+
+def _shuffle(key, ids):
+    state = st.session_state[key]
+    state["shown"] = state["shown"] + list(ids)
+    state["seed"] += 1
+
+
+def run_with_shuffle(key, signature, fetch):
+    """fetch(seed, exclude) -> results DataFrame. Starts a fresh cycle when the pool runs out."""
+    state = shuffle_state(key, signature)
+    results = fetch(state["seed"], tuple(state["shown"]))
+    if state["seed"] and len(results) < 5:
+        state["shown"] = []
+        results = fetch(state["seed"], ())
+    return state, results
+
+
+def shuffle_button(key, state, results, pool):
+    if state["seed"] == 0 and len(results) < 5:
+        return                                   # every match is already on screen
+    _, mid, _ = st.columns([1, 1, 1])
+    with mid:
+        st.button("🔀  Shuffle picks", key=f"btn_{key}", on_click=_shuffle, args=(key, results["idx"].tolist()),
+                  use_container_width=True)
+    note = f"Round {state['seed'] + 1} · drawn from the top {pool} matches, best matches more likely"
+    st.markdown(f'<p class="subsection" style="text-align:center">{note}</p>', unsafe_allow_html=True)
 
 
 st.markdown(ui.hero_html(len(model.df), model.df["original_language"].nunique()), unsafe_allow_html=True)
@@ -72,7 +115,13 @@ with tab_similar:
             idx = None
     else:
         st.caption("Showing The Dark Knight. Type any title, in English or its original script, and press Enter.")
-    i, results = get_similar(model.labels[idx], lang, family, mix) if idx is not None else (None, None)
+    i, results = None, None
+    if idx is not None:
+        label = model.labels[idx]
+        i = model.label_index[label]
+        sim_state, results = run_with_shuffle(
+            "shuffle_sim", (label, lang, family, mix),
+            lambda seed, ex: get_similar(label, lang, family, mix, VERSION, seed, ex)[1])
     if results is not None:
         st.markdown(ui.seed_html(model.df.loc[i]), unsafe_allow_html=True)
         where = f" in {LANG_NAMES[lang]}" if lang else ""
@@ -80,10 +129,11 @@ with tab_similar:
                     '<p class="subsection">Each pick shows why it matched.</p>', unsafe_allow_html=True)
         if len(results):
             st.markdown(ui.cards_html(results), unsafe_allow_html=True)
+            shuffle_button("shuffle_sim", sim_state, results, 25)
         else:
             st.caption("No matches with these filters. Try another language or turn off Family-friendly.")
 
-        twins = get_twins(i, family)
+        twins = get_twins(i, family, VERSION, sim_state["seed"])
         if len(twins):
             st.markdown('<div class="section">Same vibe, <span>another language</span></div>'
                         '<p class="subsection">The closest match to your movie in other film industries. '
@@ -109,7 +159,10 @@ with tab_mood:
     text = st.session_state.get("mood_text", "").strip()
 
     if pill or text:
-        moods, results = get_mood(text, pill, lang, family, mix)
+        moods = model.detect_moods(text) if not pill else [pill]
+        mood_state, results = run_with_shuffle(
+            "shuffle_mood", (text, pill, lang, family, mix),
+            lambda seed, ex: get_mood(text, pill, lang, family, mix, VERSION, seed, ex)[1])
         where = f" in {LANG_NAMES[lang]}" if lang else ""
         if moods:
             label = " + ".join(f"{MOODS[m]['emoji']} {MOODS[m]['label']}" for m in moods)
@@ -121,6 +174,7 @@ with tab_mood:
             st.info("Couldn't match those words to any movie. Try words like 'motivation', 'funny', 'scary' or 'romantic'.")
         elif len(results):
             st.markdown(ui.cards_html(results), unsafe_allow_html=True)
+            shuffle_button("shuffle_mood", mood_state, results, 40)
         if 0 < len(results) < 5:
             st.caption("Only a few films fit this mood with your filters. Try another language or turn off Family-friendly.")
     else:

@@ -273,19 +273,35 @@ class MovieMaster:
         return ok
 
     @staticmethod
-    def _pick(score, ok, n, langs=None, per_lang_cap=None):
-        order = np.argsort(np.where(ok, score, -np.inf))[::-1]
+    def _pick(score, ok, n, langs=None, per_lang_cap=None, seed=0, pool=25, exclude=(), min_rel=0.0):
+        """Choose n results. seed=0: the best n. Any other seed: a weighted random draw from the
+        top `pool` candidates (better matches are more likely), skipping ids in `exclude`."""
+        ok = ok.copy()
+        if exclude:
+            ex = np.fromiter(exclude, dtype=int)
+            ok[ex] = False
+        order = [i for i in np.argsort(np.where(ok, score, -np.inf))[::-1][:max(pool, n) if seed else len(score)]
+                 if ok[i]]
+        if seed and order:
+            best = max(score[i] for i in order) if not exclude else score[np.where(ok | np.isin(np.arange(len(score)), list(exclude)), score, -np.inf).argmax()]
+            close = [i for i in order if score[i] >= min_rel * best]   # stay close to the best match
+            order = close if len(close) >= 3 * n else order[:3 * n]      # but always keep some variety
+        if seed and len(order) > n:
+            s = score[order]
+            w = (s - s.min() + 1e-6) ** 2          # squared: top matches stay much more likely
+            rng = np.random.default_rng(seed)
+            order = list(rng.choice(order, size=len(order), replace=False, p=w / w.sum()))
         picked, seen = [], {}
         for i in order:
-            if not ok[i] or len(picked) == n:
+            if len(picked) == n:
                 break
             if per_lang_cap:
                 l = langs[i]
                 if seen.get(l, 0) >= per_lang_cap:
                     continue
                 seen[l] = seen.get(l, 0) + 1
-            picked.append(i)
-        return picked
+            picked.append(int(i))
+        return sorted(picked, key=lambda i: -score[i])   # show best-first
 
     def explain(self, i, j):
         """Plain-English reason why movie j was recommended for movie i."""
@@ -319,10 +335,11 @@ class MovieMaster:
         out = self.df.loc[idx, cols].copy()
         out["score"] = np.round(score[idx], 3) if len(idx) else []
         out["why"] = reasons if reasons is not None else ""
+        out["idx"] = list(idx)
         return out.reset_index(drop=True)
 
     # ----------------------------------------------------------- mode 1
-    def similar(self, name, n=5, lang=None, family_only=False, mix=False):
+    def similar(self, name, n=5, lang=None, family_only=False, mix=False, seed=0, exclude=()):
         i = self.find(name)
         if i is None:
             return None, None
@@ -331,10 +348,10 @@ class MovieMaster:
         ok = self._mask(lang, family_only, min_rank=0.1)
         ok[i] = False
         cap = 2 if (mix and not lang) else None
-        top = self._pick(score, ok, n, self.df["original_language"].values, cap)
+        top = self._pick(score, ok, n, self.df["original_language"].values, cap, seed=seed, pool=25, exclude=exclude, min_rel=0.6)
         return i, self._result(top, score, [self.explain(i, j) for j in top])
 
-    def twins(self, i, n=6, family_only=False):
+    def twins(self, i, n=6, family_only=False, seed=0, exclude=()):
         """Closest match in each of several other languages."""
         seed_lang = self.df.loc[i, "original_language"]
         langs = [l for l in TWIN_LANGS if l != seed_lang][:n]
@@ -346,7 +363,7 @@ class MovieMaster:
         for l in langs:
             ok = self._mask(l, family_only, min_rank=0.2) & shares_genre & (sims >= self.TWIN_MIN_SIM)
             ok[i] = False
-            picks += self._pick(score, ok, 1)
+            picks += self._pick(score, ok, 1, seed=seed + hash(l) % 1000 if seed else 0, pool=3, exclude=exclude)
         return self._result(picks, score, [self.explain(i, j) for j in picks])
 
     # ----------------------------------------------------------- mode 2
@@ -356,7 +373,7 @@ class MovieMaster:
         hits = {m: h for m, h in hits.items() if h}
         return sorted(hits, key=hits.get, reverse=True)[:2]
 
-    def by_mood(self, text, n=5, moods=None, lang=None, family_only=False, mix=False):
+    def by_mood(self, text, n=5, moods=None, lang=None, family_only=False, mix=False, seed=0, exclude=()):
         moods = moods if moods is not None else self.detect_moods(text)
         if moods:
             phrases = [p.strip() for m in moods for p in MOODS[m]["keywords"].split(",")]
@@ -380,7 +397,7 @@ class MovieMaster:
         if want:
             ok &= genre > 0          # results must fit at least one of the mood's genres
         cap = 2 if (mix and not lang) else None
-        top = self._pick(score, ok, n, self.df["original_language"].values, cap)
+        top = self._pick(score, ok, n, self.df["original_language"].values, cap, seed=seed, pool=40, exclude=exclude, min_rel=0.7)
 
         wanted = {p.lower() for p in phrases}
         reasons = []
