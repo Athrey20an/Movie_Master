@@ -224,7 +224,11 @@ def hero_html(n_movies, n_langs, posters=()):
 def background_css(b64, ratio):
     """Clapperboard watermark: fixed in the bottom-right corner, faint, slowly floating."""
     return f"""<style>
-.stApp {{ position: relative; }}
+.stApp {{ position: relative; background: #0B0B0F !important; }}
+/* Streamlit's inner containers can carry the theme colour and hide the watermark: make them see-through */
+[data-testid="stAppViewContainer"], [data-testid="stMain"], [data-testid="stMainBlockContainer"],
+section.main, .main, [data-testid="stHeader"], [data-testid="stBottom"], [data-testid="stBottom"] > div,
+[data-testid="stAppViewBlockContainer"] {{ background: transparent !important; }}
 .stApp::before {{ content: ""; position: fixed; right: -70px; bottom: -50px; z-index: 0; pointer-events: none;
   width: min(560px, 62vw); aspect-ratio: {ratio:.4f};
   background: url(data:image/webp;base64,{b64}) no-repeat center / contain;

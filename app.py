@@ -10,18 +10,17 @@ st.markdown(ui.CSS, unsafe_allow_html=True)
 
 
 @st.cache_data(show_spinner=False)
-def background_style():
-    """Clapperboard watermark from clapperboard.webp (top level of the repo, or static/)."""
+def background_style(path, size, mtime):
+    """Clapperboard watermark. Cached per file version, so replacing the image updates it."""
     import base64
     from PIL import Image
-    path = next((p for p in ["clapperboard.webp", "static/clapperboard.webp"] if Path(p).exists()), None)
-    if not path:
-        return ""
     w, h = Image.open(path).size
     return ui.background_css(base64.b64encode(Path(path).read_bytes()).decode(), w / h)
 
 
-st.markdown(background_style(), unsafe_allow_html=True)
+BG = next((p for p in ["clapperboard.webp", "static/clapperboard.webp"] if Path(p).exists()), None)
+if BG:   # checked on every run, never cached as "missing"
+    st.markdown(background_style(BG, Path(BG).stat().st_size, Path(BG).stat().st_mtime), unsafe_allow_html=True)
 
 
 DATA = next(p for p in ["data/movies_master.csv.gz", "movies_master.csv.gz"] if Path(p).exists())
