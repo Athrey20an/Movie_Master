@@ -4,7 +4,7 @@ A movie recommender with two modes:
 - **Similar movies:** pick a movie, get 5 similar ones.
 - **By mood:** type how you feel ("I need motivation", "cheer me up"), get 5 movies that match.
 
-**Live demo:** _add your Streamlit link here_
+**Live demo:** https://movie-master.streamlit.app/
 
 ## How it works
 - **Data:** TMDB 5000 (4,800 movies: genres, keywords, overview, cast, director, ratings).
