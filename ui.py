@@ -7,7 +7,7 @@ POSTER_BASE = "https://image.tmdb.org/t/p/w342"
 
 CSS = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;800&display=swap');
 html, body, [class*="css"], .stMarkdown, .stTextInput, .stSelectbox { font-family: 'Inter', sans-serif; }
 .stApp { background: #0B0B0F; color: #F2F2F5; }   /* backup if .streamlit/config.toml is missing */
 #MainMenu, footer, header[data-testid="stHeader"] { visibility: hidden; height: 0; }
@@ -20,10 +20,28 @@ html, body, [class*="css"], .stMarkdown, .stTextInput, .stSelectbox { font-famil
 .hero::before { content: ""; position: absolute; inset: -30%; z-index: -1;
   background: radial-gradient(circle at 50% 30%, rgba(229,9,20,.30), rgba(11,11,15,0) 55%);
   animation: drift 14s ease-in-out infinite; }
-.hero h1 { font-size: clamp(2.2rem, 6vw, 3.6rem); font-weight: 800; letter-spacing: -1.5px; margin: 0;
-  background: linear-gradient(90deg, #fff 0%, #ffb3b8 25%, #E50914 50%, #ffb3b8 75%, #fff 100%);
-  background-size: 200% auto; -webkit-background-clip: text; background-clip: text; color: transparent;
-  animation: titleShine 6s linear infinite, fadeUp .7s ease both; }
+/* MOVIE / MASTER logo: stacked Anton lettering, warm cream fill, film grain, slow light sweep */
+.hero h1.logo { margin: 0 auto; display: inline-flex; flex-direction: column; align-items: center;
+  font-family: 'Anton', Impact, 'Arial Narrow', sans-serif; font-weight: 400; line-height: .9;
+  font-size: clamp(3.3rem, 10vw, 6.4rem);   /* MASTER size; MOVIE and the divider scale from it */
+  text-transform: uppercase; filter: drop-shadow(0 10px 30px rgba(229,9,20,.35)); }
+.logo .l1, .logo .l2 { display: block;
+  background:
+    linear-gradient(105deg, transparent 42%, rgba(255,255,255,.9) 50%, transparent 58%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.25 0 0 0 0 0.16 0 0 0 0 0.08 0 0 0 .6 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    linear-gradient(180deg, #FFF6E6 0%, #F1DDBC 55%, #CFA877 100%);
+  background-size: 260% 100%, 140px 140px, 100% 100%;
+  background-position: 160% 0, 0 0, 0 0;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: logoSweep 7s ease-in-out 1.2s infinite, logoIn .8s cubic-bezier(.2,.8,.2,1) both; }
+.logo .l1 { font-size: .5em; letter-spacing: .93em; margin-right: -.93em; }   /* tracked out to MASTER's width */
+.logo .l2 { font-size: 1em; letter-spacing: .02em; animation-delay: 1.35s, .12s; }
+.logo .rule { width: 100%; height: 3px; margin: .1em 0 .17em; border-radius: 2px;
+  background: linear-gradient(90deg, transparent, #E50914 18%, #FF4D57 50%, #E50914 82%, transparent);
+  transform-origin: center; animation: ruleIn .9s cubic-bezier(.2,.8,.2,1) .25s both; }
+@keyframes logoSweep { 0% { background-position: 160% 0, 0 0, 0 0; } 45%, 100% { background-position: -60% 0, 0 0, 0 0; } }
+@keyframes logoIn { from { opacity: 0; translate: 0 18px; } }
+@keyframes ruleIn { from { transform: scaleX(0); opacity: 0; } to { transform: scaleX(1); opacity: 1; } }
 .hero p, .stats { animation: fadeUp .7s ease .15s both; }
 .marquee { overflow: hidden; margin: 1.4rem -1rem 0; animation: fadeUp .9s ease .3s both;
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
@@ -34,7 +52,7 @@ html, body, [class*="css"], .stMarkdown, .stTextInput, .stSelectbox { font-famil
   background: #1c1c25; transition: opacity .3s ease, transform .3s ease; }
 .track img:hover { opacity: 1; transform: translateY(-4px) scale(1.05); }
 @media (max-width: 560px) { .track img { height: 96px; } }
-.hero p { color: #A8A8B3; font-size: 1.05rem; margin: .6rem auto 0; max-width: 600px; }
+.hero p { color: #A8A8B3; font-size: 1.05rem; margin: 1.1rem auto 0; max-width: 600px; }
 .stats { display: flex; justify-content: center; gap: 1.6rem; margin-top: 1rem; flex-wrap: wrap; }
 .stats div { color: #8E8E99; font-size: .82rem; }
 .stats b { color: #fff; font-size: 1.05rem; display: block; }
@@ -214,7 +232,8 @@ def hero_html(n_movies, n_langs, posters=()):
     if posters:
         imgs = "".join(f'<img src="https://image.tmdb.org/t/p/w185{p}" alt="" loading="lazy">' for p in posters)
         strip = f'<div class="marquee"><div class="track">{imgs}{imgs}</div></div>'   # doubled for a seamless loop
-    return ('<div class="hero"><h1>Movie Master</h1>'
+    return ('<div class="hero"><h1 class="logo" aria-label="Movie Master">'
+            '<span class="l1">Movie</span><span class="rule"></span><span class="l2">Master</span></h1>'
             '<p>Pick a movie you love, or tell it how you feel. Get picks from around the world, '
             'with the reason behind every one.</p>'
             f'<div class="stats"><div><b>{n_movies:,}</b>movies</div><div><b>{n_langs}</b>languages</div>'
